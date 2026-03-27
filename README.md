@@ -41,47 +41,44 @@ Zusätzlich zu den Profilen gibt es eine **dynamische Blacklist**: Ein Textfeld 
 ## 6. Die Daten-Philosophie (Read-Only)
 Die App arbeitet rein **lesend**. Sie holt sich das Wissen aus OpenStreetMap, verändert aber ausschließlich die lokale GPX-Datei auf dem Handy. Fehlende Hindernisse in der echten Weltkarte werden nicht über diese App, sondern über spezialisierte Tools (z. B. StreetComplete) in die OSM-Datenbank eingetragen.
 
-## 7. Spezifische Routing-Logik & Anforderungen
+## 7. Beispiel-Konfiguration: Profil "Handbike (Muskelkraft)"
 
-In diesem Abschnitt wird die physikalische Logik beschrieben, nach der die Route analysiert und bewertet wird. Jedes Segment wird individuell auf Basis der folgenden Parameter geprüft:
+In diesem Abschnitt wird die physikalische Logik beschrieben, nach der eine Route im Handbike-Profil analysiert wird. Jedes Segment wird individuell auf Basis der folgenden Parameter geprüft und ggf. markiert:
 
 ### 7.1 Die "Dynamische Steigungs-Matrix"
-Das Herzstück des Profils koppelt die erlaubte Steigung an den jeweiligen Untergrund, um Traktionsverlust zu vermeiden:
-* **Asphalt / Beton (paved):** Bis 5 % unproblematisch (Dauerlast), bis 7 % kurzzeitig okay, **über 8 % Sperrung**.
+Das Herzstück des Profils koppelt die erlaubte Steigung an den jeweiligen Untergrund, um Traktionsverlust am Antriebsrad zu vermeiden:
+* **Asphalt / Beton (paved):** Bis 5 % unproblematisch (Dauerlast), bis 7 % kurzzeitig okay, **über 8 % Sperrung (🔴)**.
 * **Wassergebundene Decke (compacted):** Maximal **2,5 %** (Gefahr des Eingrabens).
 * **Feinsplitt (fine_gravel):** Maximal **1,0 %** (Vermeidung von Traktionsverlust/Rutschen).
 * **Naturwege / Erde / Gras:** Maximal **2,0 % - 4,0 %** (je nach Bodenfestigkeit).
 * **Sand:** Wird komplett gemieden (**0 %** Steigung erlaubt / unpassierbar).
 
 ### 7.2 Untergründe & Präferenzen
-* **Pflastersteine / Kopfsteinpflaster (cobblestone):** Werden akzeptiert, um mittlere Umwege zu vermeiden (Straf-Faktor ca. 2.0 bis 2.2), aber wegen der Vibrationen nicht bevorzugt.
-* **Landschafts-Bonus:** Starke Bevorzugung von Wegen durch Wälder und entlang von Flüssen/Gewässern.
+* **Pflastersteine (cobblestone):** Werden akzeptiert, um mittlere Umwege zu vermeiden (Straf-Faktor ca. 2.0), aber wegen der Vibrationen als Warnung (**🟡**) markiert.
+* **Landschafts-Bonus:** Bevorzugung von Wegen durch Wälder und entlang von Gewässern bei der Analyse von Alternativvorschlägen.
 
 ### 7.3 Hindernisse & Barrieren ("Showstopper")
-Strikte physikalische Grenzen für das Handbike:
-* **Treppen & Stufen (steps):** Komplett gesperrt (Faktor 1.000.000).
-* **Drängelgitter (kissing_gate):** Komplett gesperrt (Wenderadius/Länge des Geräts zu groß).
-* **Drehkreuze & Stile:** Komplett gesperrt.
-* **Bordsteinkanten (kerb):** Bis 6 cm kein Problem; 6 bis 10 cm mit Strafzeit; über 10 cm gesperrt.
+Strikte physikalische Grenzen, die sofort einen **roten Wegpunkt (🛑)** auslösen:
+* **Treppen & Stufen (steps):** Komplett gesperrt.
+* **Drängelgitter (kissing_gate):** Gesperrt (Wenderadius/Länge des Geräts zu groß).
+* **Bordsteinkanten (kerb):** Bis 6 cm okay; 6 bis 10 cm Warnung; über 10 cm Sperrung.
 * **Breite:** Generelles Minimum **80 cm**; Engstellen (z. B. Poller) absolut minimum **65 cm**.
 
 ### 7.4 Straßen-Logik & City-Modus
-Spezielle Regeln für den Mischverkehr:
-* **Bundes- & Landstraßen:** Außerorts strikt gesperrt (außer bei begleitendem Radweg). Innerorts nur als letzte Option.
-* **Fußgänger-Bonus:** Bevorzugung von Fußgängerzonen und Gehwegen (rechtliche Gleichstellung als Fußgänger).
-* **Radweg-Vorrang:** Existiert ein Radweg neben einem Gehweg, gewinnt der Radweg für flüssigeres Fahren.
-* **Abbiege-Verhalten:** Bevorzugung flüssiger Kurven gegenüber häufigem 90-Grad-Abbiegen.
+* **Bundes- & Landstraßen:** Außerorts ohne Radweg strikt gesperrt (🔴). Innerorts nur als letzte Option (🟡).
+* **Fußgänger-Bonus:** Bevorzugung von Fußgängerzonen und Gehwegen gegenüber dem Autoverkehr.
+* **Abbiege-Verhalten:** Bevorzugung flüssiger Kurven gegenüber häufigem 90-Grad-Abbiegen (Wendekreis-Optimierung).
 
 ### 7.5 Mathematische Grundlage für den Check
-Die Analyse der GPX-Daten erfolgt über die Gradienten-Formel für jedes Wegsegment:
+Die Berechnung der Steigung $G$ erfolgt für jedes Segment zwischen zwei GPS-Punkten:
 
 $$G = \frac{h_2 - h_1}{d} \cdot 100$$
 
 *(G = Steigung in %, h = Höhe, d = Distanz)*
 
 ### 7.6 Daten-Integration (Metadaten)
-Das Tool nutzt die **OpenRouteService (ORS) API**, um die GPX-Rohdaten mit präzisen Metadaten (Surface, Steepness, OSM-IDs) anzureichern und abzugleichen.
+Der Analyzer nutzt die **OpenRouteService (ORS) API**, um die GPX-Rohdaten mit präzisen Metadaten (Surface, Steepness, Smoothness) anzureichern.
 
 ### 7.7 Oberflächen-Qualität & Querneigung
-* **Oberflächen-Qualität (Smoothness):** Auswertung des `smoothness`-Tags. Asphaltwege im schlechten Zustand (`bad`, `very_bad`) werden wie Schotter behandelt, um Erschütterungen zu minimieren.
-* **Querneigung (Camber):** Wo Daten zur Seitenneigung vorliegen, werden Werte über **2-3 %** bestraft. Dies verhindert einseitige Ermüdung durch Gegensteuern und minimiert die Kippgefahr.
+* **Oberflächen-Qualität (Smoothness):** Auswertung des `smoothness`-Tags. Asphaltwege im schlechten Zustand (`bad`, `very_bad`) werden automatisch wie Schotter behandelt (Limit 2,5 %).
+* **Querneigung (Camber):** Wo Daten zur Seitenneigung vorliegen, werden Werte über **2-3 %** als Warnung markiert, um einseitige Ermüdung und Kippgefahr zu vermeiden.
