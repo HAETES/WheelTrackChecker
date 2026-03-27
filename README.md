@@ -107,3 +107,55 @@ Die App filtert gezielt nach Infrastruktur, die für die Tourenplanung mit dem H
 
 ### 8.4 Wegpunkt-Injektion & Info-Tags
 Jeder gefundene Service-Punkt wird als XML-Wegpunkt (`<wpt>`) in die GPX-Datei geschrieben. Dabei werden, sofern in OSM vorhanden, Details in die Beschreibung übernommen (z. B. Türbreiten oder vorhandene Rampen), die in der Navi-App als Info-Fenster oder Sprachansage erscheinen.
+
+## 9. Web-App & Plattform-Flexibilität
+Um den **WheelTrackChecker** ohne technische Hürden nutzbar zu machen, ist die Umsetzung als Web-App vorgesehen. Nutzer laden ihre GPX-Datei im Browser hoch, die Verarbeitung erfolgt serverseitig, und die "geimpfte" Datei wird sofort wieder zum Download bereitgestellt. Dies ermöglicht die Nutzung auf Android, iOS und Desktop-Systemen gleichermaßen.
+
+## 10. Intelligente Umleitung & Notfall-Integration (Zukunftsidee)
+Das Tool entwickelt sich vom passiven Warner zum aktiven Assistenten:
+* **Alternative-Sourcing:** Erkennt das System ein kritisches Hindernis (🔴), sucht es über die ORS-API automatisch nach einer barrierefreien Umfahrung für diesen spezifischen Abschnitt und schlägt diese grafisch vor.
+* **Google Maps Fallback:** Für den Fall, dass spezialisierte Navi-Apps nicht zur Verfügung stehen, wird in kritische Wegpunkte ein direkter Google-Maps-Navigationslink injiziert. So kann per einfachem Klick eine Standard-Navigation zum nächsten sicheren Punkt gestartet werden.
+
+## 11. Ad-hoc-Suche: "Nächste barrierefreie Toilette/Café"
+
+Zusätzlich zum Vorab-Scan der gesamten Route bietet der **WheelTrackChecker** eine Echtzeit-Suchfunktion für unvorhergesehene Pausen oder Notfälle.
+
+### 11.1 Die "Quick-Find"-Logik
+Per Knopfdruck (oder Klick auf den aktuellen GPS-Standort) startet die App eine Radialsuche im unmittelbaren Umkreis.
+* **Priorisierung:** Es werden ausschließlich Orte mit dem Status `wheelchair=yes` (🟢) oder `wheelchair=limited` (⚠️) angezeigt.
+* **Distanz-Check:** Die Ergebnisse werden nach der tatsächlichen Wegstrecke (nicht Luftlinie!) sortiert, um sicherzustellen, dass keine unüberwindbaren Hindernisse zwischen dem Nutzer und dem Ziel liegen.
+
+### 11.2 Notfall-Kategorien (Emergency POIs)
+Die Suche ist auf die kritischsten Bedürfnisse optimiert:
+1. **WC-Notfall:** Suche nach der nächsten `toilets:wheelchair=yes`.
+2. **Energie/Wetter:** Suche nach dem nächsten barrierefreien Café/Restaurant zum Aufwärmen oder Akkuladen.
+3. **Technik:** Suche nach dem nächsten Ort mit Werkzeug oder Unterstellmöglichkeit.
+
+### 11.3 Interaktiver Rettungslink
+Zu jedem gefundenen Notfall-Punkt wird sofort ein **Google Maps Navigations-Link** generiert. Da die App "Man-in-the-Middle" arbeitet, kann dieser Punkt sofort an die bevorzugte Navigations-App übergeben werden, um die aktuelle Route für den Abstecher kurzzeitig zu verlassen.
+
+## 12. Rescue-Modus: "Ich stecke fest – Finde einen Ausweg"
+
+Der Rescue-Modus ist eine Ad-hoc-Funktion für Situationen, in denen die aktuelle Route unpassierbar wird (z. B. durch Baustellen, Blockaden oder Fehlplanungen).
+
+### 12.1 Die "Back-to-Track"-Logik
+Per Knopfdruck analysiert die App die Umgebung ausgehend vom aktuellen GPS-Standort, um den Nutzer sicher zurück auf die geplante Route oder zum Ziel zu führen.
+* **Sperr-Radius:** Der unpassierbare Punkt wird mit einem virtuellen Sperr-Radius (z. B. 50m) belegt, damit der Algorithmus nicht versucht, den Nutzer wieder dorthin zurückzuführen.
+* **Barrierefreier Korridor:** Die App sucht im Umkreis nach dem nächstgelegenen Segment der Original-Route, das die Kriterien des Geräte-Profils (Asphalt, < 8 % Steigung, min. 80 cm Breite) erfüllt.
+
+### 12.2 Geführte Umgehung (Re-Routing)
+Anstatt nur eine Linie anzuzeigen, erstellt die App eine temporäre "Mini-Route":
+1. **Ausgangspunkt:** Aktuelle GPS-Position.
+2. **Ziel:** Der nächste sichere "Einstiegspunkt" auf der Original-Route.
+3. **Profil-Treue:** Auch diese Notfall-Umleitung wird sofort gegen die Steigungs-Matrix und Hindernis-Datenbank des Handbike-Profils geprüft.
+
+### 12.3 Visueller Ausweg (Google Maps Overlay)
+Falls die Navi-App (Komoot/OsmAnd) Schwierigkeiten hat, die Umleitung schnell zu verarbeiten, generiert das Tool einen **"Rescue-Link"**. Dieser öffnet eine Google Maps Ansicht, in der die barrierefreie Umleitung als Overlay über der Standardkarte liegt, um eine sofortige Orientierung per Sichtnavigation zu ermöglichen.
+
+## 13. KI-Integration: Vom statischen Filter zum lernenden Assistenten
+
+Der WheelTrackChecker nutzt KI-gestützte Ansätze, um Datenungenauigkeiten auszugleichen und die Sicherheit zu erhöhen:
+
+* **Predictive Path Analysis:** Einsatz von Machine Learning, um die individuelle Erschöpfung des Fahrers zu prognostizieren. Steigungen werden dynamisch bewertet: Was am Anfang der Tour "Grün" ist, kann gegen Ende der Tour als "Gelb" (Warnung) markiert werden.
+* **Visual Hazard Detection:** (Zukunftsidee) Integration von Bilderkennung, um via Street-View-Daten Bordsteinhöhen und Oberflächenqualitäten zu verifizieren, die in den OSM-Basisdaten fehlen.
+* **Natural Language Rescue:** Ein KI-Sprachinterface ermöglicht im "Rescue-Modus" eine intuitive Kommunikation. Der Nutzer kann Hindernisse per Sprache beschreiben, woraufhin die KI unter Einhaltung aller Profil-Limits eine alternative Route generiert.
