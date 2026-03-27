@@ -82,3 +82,28 @@ Der Analyzer nutzt die **OpenRouteService (ORS) API**, um die GPX-Rohdaten mit p
 ### 7.7 Oberflächen-Qualität & Querneigung
 * **Oberflächen-Qualität (Smoothness):** Auswertung des `smoothness`-Tags. Asphaltwege im schlechten Zustand (`bad`, `very_bad`) werden automatisch wie Schotter behandelt (Limit 2,5 %).
 * **Querneigung (Camber):** Wo Daten zur Seitenneigung vorliegen, werden Werte über **2-3 %** als Warnung markiert, um einseitige Ermüdung und Kippgefahr zu vermeiden.
+
+## 8. Service-Infrastruktur & Wheelmap-Integration
+
+Über die Analyse von Gefahrenstellen hinaus fungiert der **WheelTrackChecker** als digitaler Service-Guide. Er nutzt die Barrierefreiheits-Daten von OpenStreetMap (identisch mit der Wheelmap-Datenbank), um hilfreiche Infrastruktur entlang der Route zu finden.
+
+### 8.1 Der "Korridor-Scan" (POI-Suche)
+Die App scannt nicht wahllos, sondern legt einen virtuellen Suchkorridor um die geplante Route:
+* **Suchradius:** Standardmäßig **200 Meter** links und rechts der Wegstrecke.
+* **Logik:** Es werden nur Orte markiert, die ohne große Umwege oder zusätzliche, ungeprüfte Steigungen vom Handbike aus erreichbar sind.
+
+### 8.2 Das Ampel-System für Barrierefreiheit (`wheelchair`)
+Gefundene Points of Interest (POIs) werden basierend auf ihrem Barrierefreiheits-Status in die GPX-Datei injiziert:
+* **♿ Grün (Vollständig):** Tag `wheelchair=yes`. Der Ort ist stufenlos zugänglich, alle Räume sind barrierefrei erreichbar.
+* **⚠️ Gelb (Eingeschränkt):** Tag `wheelchair=limited`. Der Eingang ist meist stufenlos, aber es gibt Einschränkungen (z. B. eine kleine Schwelle oder das WC ist nicht rollstuhlgerecht).
+* **❌ Ignoriert:** Orte mit `wheelchair=no` werden standardmäßig nicht als Service-Punkt angezeigt, um Fehlplanungen zu vermeiden.
+
+### 8.3 Priorisierte Service-Kategorien
+Die App filtert gezielt nach Infrastruktur, die für die Tourenplanung mit dem Handbike essenziell ist:
+* **Sanitäranlagen (`amenity=toilets`):** Explizite Suche nach `toilets:wheelchair=yes`.
+* **Gastronomie (`amenity=cafe|restaurant`):** Pausenorte mit gesichertem Zugang.
+* **Parkmöglichkeiten (`amenity=parking`):** Kennzeichnung von Behindertenparkplätzen (`parking:condition=wheelchair`) für Start- und Zielpunkte.
+* **Medizinische Notfälle:** Apotheken und Krankenhäuser mit gesichertem Rollstuhlzugang.
+
+### 8.4 Wegpunkt-Injektion & Info-Tags
+Jeder gefundene Service-Punkt wird als XML-Wegpunkt (`<wpt>`) in die GPX-Datei geschrieben. Dabei werden, sofern in OSM vorhanden, Details in die Beschreibung übernommen (z. B. Türbreiten oder vorhandene Rampen), die in der Navi-App als Info-Fenster oder Sprachansage erscheinen.
