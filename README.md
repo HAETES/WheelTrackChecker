@@ -159,3 +159,19 @@ Der WheelTrackChecker nutzt KI-gestützte Ansätze, um Datenungenauigkeiten ausz
 * **Predictive Path Analysis:** Einsatz von Machine Learning, um die individuelle Erschöpfung des Fahrers zu prognostizieren. Steigungen werden dynamisch bewertet: Was am Anfang der Tour "Grün" ist, kann gegen Ende der Tour als "Gelb" (Warnung) markiert werden.
 * **Visual Hazard Detection:** (Zukunftsidee) Integration von Bilderkennung, um via Street-View-Daten Bordsteinhöhen und Oberflächenqualitäten zu verifizieren, die in den OSM-Basisdaten fehlen.
 * **Natural Language Rescue:** Ein KI-Sprachinterface ermöglicht im "Rescue-Modus" eine intuitive Kommunikation. Der Nutzer kann Hindernisse per Sprache beschreiben, woraufhin die KI unter Einhaltung aller Profil-Limits eine alternative Route generiert.
+
+## 14. Visuelle Verifikation (Street View Integration)
+
+Um die Abhängigkeit von rein numerischen Daten (Steigung in %) zu verringern, integriert der **WheelTrackChecker** eine visuelle Kontrollinstanz:
+
+* **Automated Link Injection:** Jeder Warn-Wegpunkt (🔴/🟡) erhält automatisch einen generierten Google Street View Link für die exakten Koordinaten des Hindernisses.
+* **On-the-Fly Check:** Der Nutzer kann direkt aus der Navigations-App heraus (z. B. Komoot) das reale Straßenbild öffnen, um die Beschaffenheit der Steigung oder die Höhe eines Bordsteins visuell zu prüfen.
+* **Fall-Back:** Sollten keine Street-View-Panoramen vorhanden sein (z. B. auf schmalen Weinwegen), führt der Link alternativ zur hochauflösenden Satellitenansicht von Google Maps, um die Wegbreite und Vegetation einschätzen zu können.
+
+* ## 15. Real-World-Visualisierung (Google Photo & Static View)
+
+Um Unsicherheiten bei der Wegbeschaffenheit zu minimieren, nutzt der **WheelTrackChecker** die visuelle Datenbank von Google:
+
+* **Static Preview:** Bei kritischen Steigungen (🔴) wird automatisch ein statisches Vorschaubild der GPS-Koordinate angefordert. Dies ermöglicht eine sofortige Beurteilung der Oberflächenbeschaffenheit (z. B. loses Geröll vs. glatter Asphalt).
+* **Crowdsourced Accessibility Photos:** Bei Service-Points (WCs, Cafés) ruft die App gezielt Nutzerfotos ab, die unter dem Label "Barrierefreiheit" hochgeladen wurden. So lässt sich die Steilheit einer Rampe oder die Breite einer Toilettentür bereits vor der Ankunft visuell verifizieren.
+* **Deep Link Metadata:** Jeder Wegpunkt enthält Metadaten, die bei Klick direkt die Google-Maps-Galerie des Ortes öffnen, um eine 360-Grad-Ansicht der Umgebung zu ermöglichen.
