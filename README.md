@@ -22,22 +22,25 @@ Die App sucht über OSM/Wheelmap-Daten im Umkreis der Route nach barrierefreier 
 Findet sie ein rollstuhlgerechtes WC (`toilets:wheelchair=yes`) oder ein zugängliches Café, setzt sie einen **grünen Info-Wegpunkt (♿)** in die GPX-Datei als Empfehlung für Pausen.
 
 ## 5. Volle Kontrolle (Dynamische Geräte-Profile)
-Da ein Swisstrac andere physikalische Eigenschaften hat als ein Smoov One, arbeitet die App mit **speicherbaren Profilen** (via Android `DataStore`). Vor dem Scan wählt man einfach das Gerät aus, mit dem man heute unterwegs ist:
+
+Da ein Swisstrac andere physikalische Eigenschaften hat als ein Smoov One, arbeitet die App mit speicherbaren Profilen (via Browser LocalStorage). Vor dem Scan wählt man einfach das Gerät aus, mit dem man heute unterwegs ist:
 
 * **Profil A: Handbike (Muskelkraft)**
   * *Fokus:* Traktionsverlust auf Schotter, Kraftlimit bei Steigungen, große Fahrzeugbreite.
   * *Limits:* Asphalt max. 8 %, Schotter max. 2,5 %, Breite min. 90 cm.
+
 * **Profil B: Smoov One / e-Fix (Heckantrieb & kleine Lenkräder)**
   * *Fokus:* Steigungen sind durch den Motor leichter, aber kleine Vorderräder bleiben an Kanten hängen; Kippgefahr nach hinten.
   * *Limits:* Höhere Steigungstoleranz (z. B. 12 %), dafür harte rote Warnungen bei Kopfsteinpflaster (`cobblestone`) oder Bordsteinen über 3 cm (`kerb=raised`).
+
 * **Profil C: Swisstrac (Front-Zuggerät)**
   * *Fokus:* Sehr hohe Zugkraft und Geländegängigkeit, meistert Schotter hervorragend, aber Gesamtlänge und Breite des Gespanns sind kritisch.
   * *Limits:* Schotter bis 8 % erlaubt, aber extrem strenge Prüfung bei engen Kurvenradien oder Drängelgittern.
+
 * **Profil D: E-Scooter / Rollstuhl**
   * *Fokus:* Bodenfreiheit und Reichweite.
 
 Zusätzlich zu den Profilen gibt es eine **dynamische Blacklist**: Ein Textfeld für neue OSM-Tags (z. B. Furten: `ford=yes`). Beim nächsten Scan wird dieses Hindernis sofort für alle Profile rot markiert.
-
 ## 6. Die Daten-Philosophie (Read-Only)
 Die App arbeitet rein **lesend**. Sie holt sich das Wissen aus OpenStreetMap, verändert aber ausschließlich die lokale GPX-Datei auf dem Handy. Fehlende Hindernisse in der echten Weltkarte werden nicht über diese App, sondern über spezialisierte Tools (z. B. StreetComplete) in die OSM-Datenbank eingetragen.
 
@@ -109,7 +112,8 @@ Die App filtert gezielt nach Infrastruktur, die für die Tourenplanung mit dem H
 Jeder gefundene Service-Punkt wird als XML-Wegpunkt (`<wpt>`) in die GPX-Datei geschrieben. Dabei werden, sofern in OSM vorhanden, Details in die Beschreibung übernommen (z. B. Türbreiten oder vorhandene Rampen), die in der Navi-App als Info-Fenster oder Sprachansage erscheinen.
 
 ## 9. Web-App & Plattform-Flexibilität
-Um den **WheelTrackChecker** ohne technische Hürden nutzbar zu machen, ist die Umsetzung als Web-App vorgesehen. Nutzer laden ihre GPX-Datei im Browser hoch, die Verarbeitung erfolgt serverseitig, und die "geimpfte" Datei wird sofort wieder zum Download bereitgestellt. Dies ermöglicht die Nutzung auf Android, iOS und Desktop-Systemen gleichermaßen.
+
+Um den WheelTrackChecker ohne technische Hürden nutzbar zu machen, ist die Umsetzung als Web-App vorgesehen. Nutzer wählen ihre GPX-Datei im Browser aus, die Verarbeitung erfolgt vollständig lokal auf dem Endgerät (client-seitig), und die "geimpfte" Datei wird sofort wieder zum lokalen Download bereitgestellt. Es findet kein Upload der sensiblen Routendaten auf einen Server statt. Dies ermöglicht die Nutzung auf Android, iOS und Desktop-Systemen gleichermaßen bei maximaler Datensicherheit.
 
 ## 10. Intelligente Umleitung & Notfall-Integration (Zukunftsidee)
 Das Tool entwickelt sich vom passiven Warner zum aktiven Assistenten:
@@ -121,7 +125,8 @@ Das Tool entwickelt sich vom passiven Warner zum aktiven Assistenten:
 Zusätzlich zum Vorab-Scan der gesamten Route bietet der **WheelTrackChecker** eine Echtzeit-Suchfunktion für unvorhergesehene Pausen oder Notfälle.
 
 ### 11.1 Die "Quick-Find"-Logik
-Per Knopfdruck (oder Klick auf den aktuellen GPS-Standort) startet die App eine Radialsuche im unmittelbaren Umkreis.
+
+Per Knopfdruck (oder Klick auf den aktuellen GPS-Standort) startet die App eine Radialsuche im unmittelbaren Umkreis. Da die App lokal im Browser arbeitet, sendet das Endgerät hierfür eine direkte API-Abfrage mit den aktuellen Koordinaten an die Kartendienste, ohne Umweg über eigene Server.
 * **Priorisierung:** Es werden ausschließlich Orte mit dem Status `wheelchair=yes` (🟢) oder `wheelchair=limited` (⚠️) angezeigt.
 * **Distanz-Check:** Die Ergebnisse werden nach der tatsächlichen Wegstrecke (nicht Luftlinie!) sortiert, um sicherzustellen, dass keine unüberwindbaren Hindernisse zwischen dem Nutzer und dem Ziel liegen.
 
@@ -175,3 +180,29 @@ Um Unsicherheiten bei der Wegbeschaffenheit zu minimieren, nutzt der **WheelTrac
 * **Static Preview:** Bei kritischen Steigungen (🔴) wird automatisch ein statisches Vorschaubild der GPS-Koordinate angefordert. Dies ermöglicht eine sofortige Beurteilung der Oberflächenbeschaffenheit (z. B. loses Geröll vs. glatter Asphalt).
 * **Crowdsourced Accessibility Photos:** Bei Service-Points (WCs, Cafés) ruft die App gezielt Nutzerfotos ab, die unter dem Label "Barrierefreiheit" hochgeladen wurden. So lässt sich die Steilheit einer Rampe oder die Breite einer Toilettentür bereits vor der Ankunft visuell verifizieren.
 * **Deep Link Metadata:** Jeder Wegpunkt enthält Metadaten, die bei Klick direkt die Google-Maps-Galerie des Ortes öffnen, um eine 360-Grad-Ansicht der Umgebung zu ermöglichen.
+
+## 16. Autarkie, API-Lizenzen und Sicherheit
+
+**16.1 Autarkie & API-Key-Souveränität (Fallback)**
+Um den Betrieb des WheelTrackCheckers unabhängig von zentralen Server-Kosten zu gestalten, nutzt die App das "Bring Your Own Key"-Prinzip. Nutzer können in ihren Profileinstellungen ihren eigenen, kostenlosen API-Key (z. B. von OpenRouteService) hinterlegen. Dieser Key wird sicher im lokalen `LocalStorage` des Browsers abgelegt. Dadurch bleibt das Tool ein rein persönliches Werkzeug, das dezentral und ohne laufende Infrastrukturkosten funktioniert.
+
+**16.2 Ehrenamt-Boni & Lizenzen für gemeinnützige Projekte**
+Gerade im Bereich Barrierefreiheit (Accessibility) stehen die Türen bei vielen Anbietern weit offen. Hier ist die Übersicht für die wichtigsten Dienste:
+
+* **OpenRouteService (ORS):** Das ist der wichtigste Partner für die Routenanalyse. ORS wird vom Heidelberg Institute for Geoinformation Technology (HeiGIT) betrieben – das ist also ein universitäres, forschungsnahes Projekt direkt aus dem DACH-Raum und keine kalte US-Firma. 
+  * *Standard (Kostenlos):* Jeder Nutzer bekommt standardmäßig schon ein ziemlich großzügiges Limit (oft rund 2.000 Anfragen pro Tag).
+  * *Der Ehrenamt-Bonus:* HeiGIT hat ein Herz für Projekte, die der Gesellschaft nützlich sind. Wenn das Projekt fertig ist, kann man sie einfach anschreiben, das Konzept erklären und nach einem „Collaborative / Non-Profit API Key“ fragen. Sehr oft heben sie das Limit für solche Projekte kostenlos massiv an.
+
+* **Wheelmap / Sozialhelden (OSM):** Hinter Wheelmap steckt der Berliner Verein Sozialhelden e.V. Die Daten basieren auf OpenStreetMap (sind also ohnehin frei). Wenn spezifische Wheelmap-APIs genutzt werden sollen, sind die Entwickler dort extrem hilfsbereit gegenüber anderen Open-Source-Entwicklern im Bereich Inklusion.
+
+* **Google Maps Platform (Street View & Photos):** Google ist ein kommerzieller Riese, hat aber zwei Auffangnetze:
+  * *Die 200-Dollar-Freigrenze:* Jeder Entwickler bekommt jeden Monat 200 US-Dollar Guthaben geschenkt. Damit lassen sich zigtausende Street-View-Bilder abrufen, bevor auch nur ein Cent berechnet wird. Für ein Projekt, das in Neckenmarkt startet und organisch wächst, reicht das oft monatelang.
+  * *Google for Nonprofits:* Wenn das Projekt später vielleicht über einen Verein läuft (dafür braucht man einen offiziellen NGO/Vereins-Status), gibt es riesige Gratis-Kontingente.
+
+**16.3 ⚠️ Die "Frontend-Falle" (Wichtig für das lokale Konzept)**
+Wenn ein „Master-Key“ (also ein eigener, erhöhter API-Key) für alle Nutzer in der Web-App hinterlegt wird, gibt es ein technisches Problem: Da die App komplett lokal im Browser läuft, steht dieser Schlüssel als reiner Text im JavaScript-Code. Jeder, der im Browser **F12** drückt, könnte den Schlüssel kopieren und für seine eigenen Projekte missbrauchen.
+
+* **Die Lösung (Domain Restriction):** Es muss bei ORS oder Google im Dashboard zwingend eingestellt werden, dass dieser API-Key nur funktioniert, wenn die Anfrage von der eigenen Webseite kommt.
+* **Erlaubte Herkunft (Referrer):** `https://wheeltrackchecker.app/*`
+
+Wenn jemand den Key klaut und von seinem PC aus nutzt, wird die Anfrage sofort blockiert.
