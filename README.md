@@ -206,3 +206,65 @@ Wenn ein „Master-Key“ (also ein eigener, erhöhter API-Key) für alle Nutzer
 * **Erlaubte Herkunft (Referrer):** `https://wheeltrackchecker.app/*`
 
 Wenn jemand den Key klaut und von seinem PC aus nutzt, wird die Anfrage sofort blockiert.
+
+# Kapitel 17: Die Mercator-Evolution
+## Von unbrauchbaren Schätzungen zur präzisen digitalen Vermessung
+
+### 1. Rückblick und Fehleranalyse: Warum das alte System (ORS) scheiterte
+Unsere bisherigen Tests mit der OpenRouteService (ORS) Elevation-API zeigten deutliche Mängel, die für die Planung barrierefreier Routen kritisch sind:
+
+* **Die 1-Meter-Falle:** ORS basiert auf groben SRTM-Radardaten. Die vertikale Auflösung liegt oft nur bei vollen Metern. Wenn die Route auf einer kurzen Distanz (z. B. 50 cm) von 235 m auf 236 m springt, berechnet der Algorithmus eine Steigung von **200 %**. Dies erzeugt ein massives "Rauschen" in den Daten.
+* **Die Glättungs-Lüge:** Um diese Zacken zu verbergen, glättet ORS das Profil so stark, dass reale, kurze Rampen von 7 % oder mehr (die für Rollstuhlfahrer unüberwindbar sein können) einfach verschwinden und als "0 % (eben)" gemeldet werden.
+* **Ergebnis:** Die Daten waren für eine verlässliche Sicherheitsbewertung unbrauchbar.
+
+---
+
+### 2. Das neue Konzept: Die Mercator-Logik
+Anstatt fertige, ungenaue Höhenangaben abzufragen, nutzen wir nun die **Web-Mercator-Projektion (EPSG:3857)**, um direkt in die Rohdaten von Mapbox (Terrain-RGB) zu schauen.
+
+* **Das Prinzip:** Die Welt wird als Mosaik aus quadratischen Bildern (**Kacheln**) betrachtet. Jedes Bild besteht aus 256x256 Pixeln.
+* **Die Brücke:** Da GPS-Koordinaten auf einer Kugel liegen, die Kacheln aber flach sind, nutzen wir Mercator als mathematischen Übersetzer.
+* **Pixel-Genauigkeit:** Wir berechnen für jede GPS-Koordinate exakt, in welcher Kachel und an welcher Pixel-Position sie liegt.
+
+#### Mathematische Grundlage der Umrechnung:
+Um den Kachel-Index $x$ und $y$ bei einem Zoom-Level $z$ zu finden:
+
+$$x = \lfloor \frac{lon + 180}{360} \cdot 2^z \rfloor$$
+
+$$y = \lfloor (1 - \frac{\ln(\tan(lat \cdot \frac{\pi}{180}) + \frac{1}{\cos(lat \cdot \frac{\pi}{180})})}{\pi}) \cdot \frac{1}{2} \cdot 2^z \rfloor$$
+
+---
+
+### 3. Zoom-Level 14 bis 16: Das digitale Mikroskop
+Die Genauigkeit wird über den Zoom gesteuert. Wir haben uns für ein einstellbares Modell entschieden, um auf unterschiedliche Anforderungen reagieren zu können:
+
+| Zoom | Pixel-Breite (in AT) | Anwendung |
+| :--- | :--- | :--- |
+| **14** | ~ 6,5 Meter | Grobe Analyse langer Überlandstrecken. |
+| **15** | **~ 3,2 Meter** | **Standard-Modus.** Ideal, um 7%-Rampen zu identifizieren. |
+| **16** | ~ 1,6 Meter | Detail-Modus für komplexe urbane Kreuzungen. |
+
+---
+
+### 4. Effizienz durch intelligentes Caching
+Da eine Route oft hunderte Punkte hat, die geografisch nah beieinander liegen, wäre das einzelne Abfragen jedes Punktes ineffizient und teuer.
+
+* **Bitmap-Caching:** Das Skript identifiziert vorab alle benötigten Kacheln für die gesamte Route.
+* **Einmaliger Download:** Jede Kachel (PNG) wird nur ein einziges Mal geladen.
+* **ImageData-Speicher:** Die Pixelwerte werden im Arbeitsspeicher des Browsers abgelegt. Weitere Berechnungen erfolgen in Millisekunden lokal auf dem Gerät, ohne erneuten Netzwerkzugriff.
+
+---
+
+### 5. Persistenz: LocalStorage-Konzept
+Um die Benutzererfahrung stabil zu halten, werden Einstellungen dauerhaft im Browser gespeichert:
+
+* **API-Keys:** Sowohl der ORS-Key (für die Wegführung) als auch der Mapbox-Token (für die Höhe) bleiben gespeichert.
+* **Präferenzen:** Der zuletzt genutzte Zoom-Level wird beim nächsten Start automatisch wiederhergestellt.
+* **Sicherheits-Zähler:** Ein lokaler Zähler überwacht die Anzahl der Kachel-Abfage, um das Mapbox-Freikontingent (750.000 Tiles/Monat) im Blick zu behalten.
+
+---
+
+### 6. Fazit: Warum dieser Weg "brauchbar" ist
+Durch den Wechsel auf die Mercator-Bitmap-Analyse erreichen wir eine vertikale Präzision von **0,1 Metern (10 Zentimeter)**. 
+
+Im Gegensatz zu den 1-Meter-Sprüngen von ORS erlaubt uns dies eine sanfte Berechnung der realen Neigung. In Kombination mit einem **10-Meter-Glättungsfenster** eliminieren wir das mathematische Rauschen und erhalten ein ehrliches Höhenprofil, das die "versteckten" Steigungen zeigt, auf die es beim Rollstuhl-Routing ankommt.
