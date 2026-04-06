@@ -268,3 +268,45 @@ Um die Benutzererfahrung stabil zu halten, werden Einstellungen dauerhaft im Bro
 Durch den Wechsel auf die Mercator-Bitmap-Analyse erreichen wir eine vertikale Präzision von **0,1 Metern (10 Zentimeter)**. 
 
 Im Gegensatz zu den 1-Meter-Sprüngen von ORS erlaubt uns dies eine sanfte Berechnung der realen Neigung. In Kombination mit einem **10-Meter-Glättungsfenster** eliminieren wir das mathematische Rauschen und erhalten ein ehrliches Höhenprofil, das die "versteckten" Steigungen zeigt, auf die es beim Rollstuhl-Routing ankommt.
+
+# Kapitel 18: Die Höhen-Engine (Google Elevation API & Visuelle Layer-Fusion)
+
+## 1. Der Paradigmenwechsel: DTM statt DSM
+Bisherige Tests mit rohen Satelliten- und Radardaten haben gezeigt, dass diese für die rollstuhlgerechte Navigation ungeeignet sind. Radarsysteme messen oft das Blätterdach im Wald oder das Geländer einer Brücke (Digital Surface Model - DSM), was in den Daten künstliche Hindernisse erzeugt. 
+
+Um diese "falschen Wände" zu vermeiden, wechselt der WheelTrackChecker auf die **Google Elevation API**. Google nutzt im Hintergrund bereinigte digitale Geländemodelle (Digital Terrain Models - DTM) und wendet serverseitig starke Glättungsalgorithmen an. Bäume, Gebäude und Brücken-Zacken sind in diesen Datensätzen bereits herausgerechnet, was uns eine stabile und verlässliche Bodenhöhe für die Analyse der Rollstuhl-Profile liefert.
+
+## 2. Effizienz durch Batch-Processing
+Eine durchschnittliche GPX-Route besteht aus tausenden einzelnen Koordinaten. Um die Abfragen performant zu halten, arbeitet die App mit "Batches" (Datenpaketen):
+
+1. **Extrahieren:** Die lokale GPX-Datei wird im Browser des Nutzers eingelesen und alle Koordinaten (Längen- und Breitengrade) werden extrahiert.
+2. **Bündeln (Chunking):** Das Skript teilt die Route in Blöcke von jeweils bis zu **512 Koordinaten** auf. Dies ist das exakte Limit, das Google pro einzelnem API-Aufruf erlaubt.
+3. **Zusammensetzen:** Die JSON-Antworten von Google werden vom Skript wieder zu einem durchgehenden, präzisen Höhenprofil der Route zusammengefügt.
+
+## 3. Die mathematische Logik
+Da die API saubere Höhenwerte im JSON-Format zurückliefert, entfällt die rechenintensive Pixel-Auswertung komplett. Die Berechnung der Steigung $G$ zwischen zwei Wegpunkten erfolgt durch die Kombination des Höhenunterschieds mit der exakten geografischen Distanz $d$ (berechnet über die Haversine-Formel):
+
+$$G = \frac{h_2 - h_1}{d} \cdot 100$$
+
+*(G = Steigung in %, h = bereinigte Google-Höhe in Metern, d = Distanz in Metern)*
+
+Wird hierbei das Limit des gewählten Profils (z. B. > 8 % für das Handbike auf Asphalt) überschritten, wird der Punkt im lokalen Datensatz als Warnung markiert.
+
+## 4. Layer-Fusion & Preview-Modus (Rechtliche und UX-Optimierung)
+Die Lizenzbedingungen von Google verlangen, dass Daten aus der Elevation API visuell in Verbindung mit einer Google Map dargestellt werden. Dies wandelt der WheelTrackChecker in einen massiven Vorteil für die User Experience (UX) um, indem ein visueller **Preview-Modus** zwischengeschaltet wird:
+
+Die Web-App trennt strikt zwischen der "Leinwand" und den "Daten":
+* **Layer 1 (Die Leinwand):** Im Hintergrund wird eine simple, zweidimensionale Google Map geladen.
+* **Layer 2 (Die Route):** Die ursprüngliche GPX-Route des Nutzers wird als Linie auf diese Karte gezeichnet.
+* **Layer 3 (Die Höhen-Warnungen):** Die berechneten kritischen Punkte (Steigungslimits) werden als Warn-Marker (🔴/🟡) auf der Route platziert.
+* **Layer 4 (Wheelmap-POIs):** Unabhängig von Google ruft das Skript barrierefreie Points of Interest von OpenStreetMap/Wheelmap ab und platziert diese als Service-Marker (♿) auf derselben Karte. 
+
+Rechtlich entsteht so ein sauberes "Produced Work": Die proprietären Google-Daten und die offenen OSM-Daten existieren als getrennte Ebenen friedlich übereinander auf der Karte.
+
+## 5. Der neue Workflow für den Nutzer
+Durch die Layer-Fusion wird das Tool vom blinden "File-Injektor" zu einem interaktiven Planungs-Assistenten:
+
+1. **Upload:** Der Nutzer wählt sein geplantes GPX-File (z. B. aus Komoot) an.
+2. **Hintergrund-Scan:** Die App fragt die Google Elevation Batches und die Wheelmap-POIs ab.
+3. **Visuelle Prüfung (Neu):** Die Karte erscheint. Der Nutzer sieht sofort auf einen Blick alle Steigungswarnungen und barrierefreien Service-Punkte. Er kann vorab entscheiden, ob die Route machbar ist.
+4. **Download & Injektion:** Mit einem Klick auf "GPX speichern" werden alle Daten als XML-Wegpunkte in die Datei injiziert. Die "geimpfte" Route landet auf dem Smartphone und kann in der bevorzugten Navigations-App gestartet werden.
